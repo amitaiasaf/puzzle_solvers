@@ -2,10 +2,11 @@ from __future__ import annotations
 import copy
 from dataclasses import dataclass
 from enum import Enum
+import time
 from typing import Counter, Iterable, List, Set, Tuple
-import requests
-import re
-from functools import singledispatchmethod
+
+
+from website_interface import WebsiteInterface
 
 
 class NurikabeException(Exception):
@@ -99,7 +100,7 @@ class Points(Set[Point]):
 
 
 class NumberArea(Points):
-    def __init__(self, points: Point, number: int) -> None:
+    def __init__(self, points: Points, number: int) -> None:
         super().__init__(points)
         self.number = number
         self.filled_neighbors = False
@@ -286,12 +287,15 @@ class Nurikabe:
             new_board.solve()
             self.puzzle_data = new_board.puzzle_data
             self.undetermined_places = new_board.undetermined_places
+            self.black_places = new_board.black_places
+            self.lonely_whites = new_board.lonely_whites
         except NurikabeException:
             self.mark_black({point_to_guess})
 
     def solve(self) -> None:
-        remaining = 0
-        while self.undetermined_places:
+        remaining = 100000
+        prev_remaining = 100000
+        while prev_remaining:
             change_not_in_undetermined = False
             self.avoid_2x2_blacks()
             self.avoid_isolated_blacks()
@@ -327,12 +331,19 @@ class Nurikabe:
                 if count > 1:
                     self.mark_black(Points({point}))
 
-            if len(self.undetermined_places) == remaining and not change_not_in_undetermined:
+            if remaining and len(self.undetermined_places) == remaining and not change_not_in_undetermined:
                 self.guess()
+            prev_remaining = remaining
             remaining = len(self.undetermined_places)
 
+    def serialize_solution(self):
+        return "".join("".join(["y" if c.type == CellType.BLACK else "n" for c in row]) for row in self.puzzle_data)
 
-def init_puzzle_from_task(task: str, width: int, height: int) -> Nurikabe:
+
+def init_puzzle_from_website(website_interface: WebsiteInterface) -> Nurikabe:
+    width = website_interface.width
+    height = website_interface.height
+    task = website_interface.task
     cur_board_index = 0
     cur_task_index = 0
     puzzle_data: PuzzleDataType = [[Cell() for i in range(width)] for j in range(height)]
@@ -362,18 +373,9 @@ def init_puzzle_from_task(task: str, width: int, height: int) -> Nurikabe:
     return Nurikabe(width, height, puzzle_data)
 
 
-def load_puzzle_from_internet():
-    request = requests.post("https://www.puzzle-nurikabe.com/?size=10")
-    text = request.text
-
-    task = re.search(r"var task = '([^']*)'", text).group(1)
-    width = int(re.search(r'name="w" value="(\d+)"', text).group(1))
-    height = int(re.search(r'name="h" value="(\d+)"', text).group(1))
-    return task, width, height
-
-
-puzzle = load_puzzle_from_internet()
-board = init_puzzle_from_task(*puzzle)
+website_interface = WebsiteInterface("https://www.puzzle-nurikabe.com/?size=10")
+start_time = time.time()
+board = init_puzzle_from_website(website_interface)
 print(board)
 print()
 try:
@@ -381,4 +383,6 @@ try:
 except Exception as e:
     import traceback
     print("Failed solving this board got:", traceback.format_exc(e))
+print(f"Solved board (took {time.time() - start_time} seconds)")
 print(board)
+website_interface.submit_solution(board.serialize_solution())
