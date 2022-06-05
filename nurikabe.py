@@ -2,6 +2,7 @@ from __future__ import annotations
 import copy
 from dataclasses import dataclass
 from enum import Enum
+import random
 import time
 from typing import Counter, Iterable, List, Set, Tuple
 
@@ -276,7 +277,10 @@ class Nurikabe:
         if self.lonely_whites:
             return self.lonely_whites.get_undetermined_neighbors(self).pop()
         else:
-            number_area = self.get_best_number_area_to_guess()
+            # number_area = self.get_best_number_area_to_guess()
+            number_area = random.choice(self.number_areas)
+            while number_area.is_complete():
+                number_area = random.choice(self.number_areas)
             return number_area.get_undetermined_neighbors(self).pop()
 
     def guess(self) -> None:
@@ -287,8 +291,6 @@ class Nurikabe:
             new_board.solve()
             self.puzzle_data = new_board.puzzle_data
             self.undetermined_places = new_board.undetermined_places
-            self.black_places = new_board.black_places
-            self.lonely_whites = new_board.lonely_whites
         except NurikabeException:
             self.mark_black({point_to_guess})
 
@@ -333,6 +335,8 @@ class Nurikabe:
 
             if remaining and len(self.undetermined_places) == remaining and not change_not_in_undetermined:
                 self.guess()
+                if not self.undetermined_places:
+                    break
             prev_remaining = remaining
             remaining = len(self.undetermined_places)
 
@@ -373,16 +377,12 @@ def init_puzzle_from_website(website_interface: WebsiteInterface) -> Nurikabe:
     return Nurikabe(width, height, puzzle_data)
 
 
-website_interface = WebsiteInterface("https://www.puzzle-nurikabe.com/?size=10")
-start_time = time.time()
-board = init_puzzle_from_website(website_interface)
-print(board)
-print()
-try:
+def main():
+    website_interface = WebsiteInterface("https://www.puzzle-nurikabe.com/?size=3")
+    board = init_puzzle_from_website(website_interface)
     board.solve()
-except Exception as e:
-    import traceback
-    print("Failed solving this board got:", traceback.format_exc(e))
-print(f"Solved board (took {time.time() - start_time} seconds)")
-print(board)
-website_interface.submit_solution(board.serialize_solution())
+    website_interface.submit_solution(board.serialize_solution())
+
+
+if __name__ == "__main__":
+    main()
