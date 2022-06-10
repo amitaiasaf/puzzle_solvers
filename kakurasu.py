@@ -6,6 +6,8 @@ import re
 from typing import Dict, FrozenSet, Iterable, List, Set, Tuple, Union, Callable
 import requests
 
+from website_interface import WebsiteInterface
+
 
 def powerset(iterable: Iterable) -> Iterable[FrozenSet]:
     return chain.from_iterable(map(set, combinations(iterable, i)) for i in range(len(iterable)))
@@ -89,10 +91,15 @@ class Kakurasu:
         return "\n".join("\t".join(map(str, line)) for line in lines)
 
     @staticmethod
-    def from_internet(task: str, width: int, height: int) -> Kakurasu:
-        sums = [int(s) for s in task.split("/")]
+    def from_internet(website_interface: WebsiteInterface) -> Kakurasu:
+        width = website_interface.width
+        height = website_interface.height
+        sums = [int(s) for s in website_interface.task.split("/")]
         assert len(sums) == width + height, "Invalid width or height"
         return Kakurasu(None, sums[:width], sums[width:])
+
+    def serialize_solution(self) -> str:
+        return "".join("".join("1" if c.type == CellType.BLACK else "0" for c in row) for row in self.cells)
 
     def __setitem__(self, key: Tuple[int, int], value: CellType):
         row, col = key
@@ -120,19 +127,12 @@ class Kakurasu:
                     self[i, j] = value
 
 
-def load_puzzle_from_internet():
-    request = requests.post("https://www.puzzle-kakurasu.com/?size=14")
-    text = request.text
-
-    task = re.search(r"var task = '([^']*)'", text).group(1)
-    width = int(re.search(r'name="w" value="(\d+)"', text).group(1))
-    height = int(re.search(r'name="h" value="(\d+)"', text).group(1))
-    return task, width, height
+def main():
+    website_interface = WebsiteInterface("https://www.puzzle-kakurasu.com/?size=0")
+    board = Kakurasu.from_internet(website_interface)
+    board.solve()
+    website_interface.submit_solution(board.serialize_solution())
 
 
-puzzle = load_puzzle_from_internet()
-kakurasu = Kakurasu.from_internet(*puzzle)
-print(kakurasu)
-kakurasu.solve()
-print("Solved: ")
-print(kakurasu)
+if __name__ == "__main__":
+    main()

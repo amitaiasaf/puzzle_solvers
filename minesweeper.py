@@ -7,6 +7,8 @@ import time
 
 import requests
 
+from website_interface import WebsiteInterface
+
 
 class MinesweeperException(Exception):
     pass
@@ -118,6 +120,9 @@ class Minesweeper:
     def __str__(self) -> str:
         return "\n".join((" ".join((str(c) for c in row)) for row in self.puzzle_data))
 
+    def serialize_solution(self):
+        return "".join("".join(["y" if c.type == CellType.MINE else "n" for c in row]) for row in self.puzzle_data)
+
     def __getitem__(self, point: Point) -> Cell:
         return self.puzzle_data[point.row][point.col]
 
@@ -173,7 +178,10 @@ class Minesweeper:
                 raise MinesweeperException()
 
 
-def init_puzzle_from_task(task: str, width: int, height: int) -> Minesweeper:
+def init_puzzle_from_website(website_interface: WebsiteInterface) -> Minesweeper:
+    width = website_interface.width
+    height = website_interface.height
+    task = website_interface.task
     cur_board_index = 0
     cur_task_index = 0
     puzzle_data: PuzzleDataType = [[Cell() for i in range(width)] for j in range(height)]
@@ -191,20 +199,12 @@ def init_puzzle_from_task(task: str, width: int, height: int) -> Minesweeper:
     return Minesweeper(width, height, puzzle_data)
 
 
-def load_puzzle_from_internet():
-    request = requests.post("https://www.puzzle-minesweeper.com/monthly-minesweeper/")
-    text = request.text
-
-    task = re.search(r"var task = '([^']*)'", text).group(1)
-    width = int(re.search(r'name="w" value="(\d+)"', text).group(1))
-    height = int(re.search(r'name="h" value="(\d+)"', text).group(1))
-    return task, width, height
+def main():
+    website_interface = WebsiteInterface("https://www.puzzle-minesweeper.com/minesweeper-20x20-hard/")
+    board = init_puzzle_from_website(website_interface)
+    board.solve()
+    website_interface.submit_solution(board.serialize_solution())
 
 
-puzzle = load_puzzle_from_internet()
-start_time = time.time()
-board = init_puzzle_from_task(*puzzle)
-print(board)
-board.solve()
-print(f"Solved board (took {time.time() - start_time} seconds):")
-print(board)
+if __name__ == "__main__":
+    main()
