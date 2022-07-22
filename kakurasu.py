@@ -117,6 +117,7 @@ class Kakurasu:
         while self.undetermined_count:
             if last_undetermined == self.undetermined_count:
                 raise KakurasuError()
+            last_undetermined = self.undetermined_count
 
             for i, row in enumerate(self.rows):
                 for j, value in row.get_new_certain_values().items():
@@ -128,7 +129,7 @@ class Kakurasu:
 
 
 def main():
-    website_interface = WebsiteInterface("https://www.puzzle-kakurasu.com/?size=0")
+    website_interface = WebsiteInterface("https://www.puzzle-kakurasu.com/?size=12")
     board = Kakurasu.from_internet(website_interface)
     board.solve()
     website_interface.submit_solution(board.serialize_solution())
