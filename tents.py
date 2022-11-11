@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Callable
 
-from website_interface import WebsiteInterface
+from utils.website_interface import WebsiteInterface
 
 
 class TentsException(Exception):

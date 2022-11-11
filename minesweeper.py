@@ -7,7 +7,7 @@ import time
 
 import requests
 
-from website_interface import WebsiteInterface
+from utils.website_interface import WebsiteInterface
 
 
 class MinesweeperException(Exception):
@@ -32,6 +32,8 @@ class Cell:
             return "#"
         elif self.type == CellType.SAFE:
             return "-"
+        else:
+            raise MinesweeperException()
 
 
 @dataclass
@@ -64,7 +66,9 @@ class KnownNumberOfMinesArea:
 
     @staticmethod
     def create_from_number_cell(board: Minesweeper, point: Point) -> KnownNumberOfMinesArea:
-        assert board[point].type == CellType.NUMBER
+        cell = board[point]
+        if not isinstance(cell, NumberCell):
+            raise MinesweeperException()
 
         start_row = max(0, point.row - 1)
         end_row = min(board.height - 1, point.row + 1)
@@ -77,7 +81,7 @@ class KnownNumberOfMinesArea:
                 if board[Point(row, col)].type != CellType.NUMBER:
                     points.add(Point(row, col))
 
-        number_of_mines = board[point].number
+        number_of_mines = cell.number
 
         return KnownNumberOfMinesArea(board, points, number_of_mines)
 
@@ -132,7 +136,7 @@ class Minesweeper:
         self[point].type = CellType.MINE
         self.undetermined_count -= 1
 
-    def mark_all_as_mines(self, points: Point) -> None:
+    def mark_all_as_mines(self, points: Points) -> None:
         for point in points:
             self.mark_as_mine(point)
 
@@ -142,7 +146,7 @@ class Minesweeper:
         self[point].type = CellType.SAFE
         self.undetermined_count -= 1
 
-    def mark_all_as_safe(self, points: Point) -> None:
+    def mark_all_as_safe(self, points: Points) -> None:
         for point in points:
             self.mark_as_safe(point)
 

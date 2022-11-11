@@ -1,12 +1,12 @@
 from __future__ import annotations
 from copy import deepcopy
 import itertools
-from typing import FrozenSet, Iterable, List, Optional, Set, Tuple
-from website_interface import WebsiteInterface
+from typing import FrozenSet, Iterable, List, Optional, Reversible, Set, Tuple
+from utils.website_interface import WebsiteInterface
 
 
 def powerset(iterable: Iterable, min_size=0) -> Iterable[FrozenSet]:
-    return itertools.chain.from_iterable(map(set, itertools.combinations(iterable, i)) for i in range(min_size, len(iterable)))
+    return itertools.chain.from_iterable(map(frozenset, itertools.combinations(iterable, i)) for i in range(min_size, len(iterable)))
 
 
 class SkyscrappersException(Exception):
@@ -59,20 +59,20 @@ class Line:
     def __init__(self, size: int,
                  forward_number: Optional[int],
                  reverse_number: Optional[int],
-                 options: Optional[Tuple[LineOption]] = None) -> None:
+                 options: Optional[list[LineOption]] = None) -> None:
         self.size = size
         self.forward_number = forward_number
         self.reverse_number = reverse_number
         if options is not None:
             self.options = options
         else:
-            self.options = tuple(filter(self.is_option_compatible, itertools.permutations(range(1, size + 1))))
+            self.options = list(filter(self.is_option_compatible, itertools.permutations(range(1, size + 1))))
 
     def __deepcopy__(self, _) -> Line:
         return Line(self.size, self.forward_number, self.reverse_number, self.options)
 
     @staticmethod
-    def get_forward_number(option: Tuple[int]):
+    def get_forward_number(option: Iterable[int]):
         cur_height = 0
         cur_number = 0
         for height in option:
@@ -82,7 +82,7 @@ class Line:
         return cur_number
 
     @classmethod
-    def get_reverse_number(cls, option: Tuple[int]):
+    def get_reverse_number(cls, option: Reversible[int]):
         return cls.get_forward_number(reversed(option))
 
     def is_option_compatible(self, option: Tuple[int]):

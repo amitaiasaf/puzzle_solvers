@@ -6,7 +6,7 @@ from itertools import combinations
 import re
 from typing import Callable
 
-from website_interface import WebsiteInterface
+from utils.website_interface import WebsiteInterface
 
 
 class StarBattleException(Exception):
@@ -85,26 +85,28 @@ class Block:
     @ classmethod
     def create_options_for_line(cls, points: list[Point], size) -> list[Option]:
         if size == 1:
-            return [{point} for point in points]
+            return [frozenset({point}) for point in points]
         if size * 2 - 1 > len(points):
             return []
         options: list[Option] = []
         for i, point in enumerate(points[:-(size * 2 - 2)]):
-            cur_options = [{point} | option for option in cls.create_options_for_line(points[i + 2:], size - 1)]
+            cur_options = [frozenset({point} | option)
+                           for option in cls.create_options_for_line(points[i + 2:], size - 1)]
             options += cur_options
         return options
 
     @ classmethod
     def create_options(cls, points: set[Point], size) -> list[Option]:
         if size == 1:
-            return [{point} for point in points]
+            return [frozenset({point}) for point in points]
         if size > len(points):
             return []
         options: list[Option] = []
         for point in sorted(points, key=lambda p: len(p.get_neighbors())):
             points.remove(point)
             possible_places = points - point.get_neighbors()
-            cur_options = [{point} | option for option in cls.create_options(possible_places, size - 1)]
+            cur_options = [frozenset({point} | option)
+                           for option in cls.create_options(possible_places, size - 1)]
             options += cur_options
         return options
 
@@ -130,11 +132,11 @@ class Block:
         return True
 
     @staticmethod
-    def in_option(point: Point) -> Callable[[set[Point]], bool]:
+    def in_option(point: Point) -> Callable[[Option], bool]:
         return lambda option: point in option
 
     @staticmethod
-    def not_in_option(point: Point) -> Callable[[set[Point]], bool]:
+    def not_in_option(point: Point) -> Callable[[Option], bool]:
         return lambda option: point not in option
 
     def notify_value(self, point: Point, value: CellType):
@@ -242,8 +244,8 @@ class StarBattle:
     def serialize_solution(self) -> str:
         return "".join("".join("y" if c.type == CellType.STAR else "n" for c in row) for row in self.cells)
 
-    def create_cells_to_blocks_mapping(self) -> list[list[Block]]:
-        cells_to_blocks = [[None] * self.size for i in range(self.size)]
+    def create_cells_to_blocks_mapping(self) -> list[list[None | Block]]:
+        cells_to_blocks: list[list[None | Block]] = [[None] * self.size for i in range(self.size)]
         for block in self.blocks:
             for point in block.points:
                 cells_to_blocks[point.row][point.col] = block

@@ -4,19 +4,23 @@ from copy import copy, deepcopy
 from dataclasses import dataclass
 from enum import Enum
 from itertools import chain, combinations
-from typing import Callable, Iterable
+from types import NoneType
+from typing import Callable, Collection, Iterable, Optional, Sized, TypeVar
 
 from numpy import block
 
-from website_interface import WebsiteInterface
+from utils.website_interface import WebsiteInterface
 
 
 class AquariumException(Exception):
     pass
 
 
-def powerset(iterable: Iterable) -> Iterable[frozenset]:
-    return chain.from_iterable(map(set, combinations(iterable, i)) for i in range(len(iterable)))
+T = TypeVar('T')
+
+
+def powerset(iterable: Collection[T]) -> Iterable[frozenset[T]]:
+    return chain.from_iterable(map(frozenset, combinations(iterable, i)) for i in range(len(iterable)))
 
 
 @dataclass(frozen=True)
@@ -56,13 +60,15 @@ class Block:
         raise AquariumException()
 
 
+Option = frozenset[int]
+
 @dataclass
 class Row:
     def __init__(self,
                  block_ids: list[int],
                  number: int,
-                 block_to_indices: dict[int, list[int]] = None,
-                 options: list[set[int]] = None) -> None:
+                 block_to_indices: Optional[dict[int, list[int]]] = None,
+                 options: Optional[list[Option]] = None) -> None:
         self.block_ids = block_ids
         self.number = number
         if block_to_indices is None:
@@ -78,15 +84,15 @@ class Row:
     def __deepcopy__(self, _) -> Row:
         return Row(self.block_ids, self.number, copy(self.block_to_indices), copy(self.options))
 
-    def filter_option_by_count(self, option: set[int]):
+    def filter_option_by_count(self, option: Option):
         return sum(len(self.block_to_indices[b]) for b in option) == self.number
 
     @staticmethod
-    def in_option(index: int) -> Callable[[int], bool]:
+    def in_option(index: int) -> Callable[[Option], bool]:
         return lambda option: index in option
 
     @staticmethod
-    def not_in_option(index: int) -> Callable[[int], bool]:
+    def not_in_option(index: int) -> Callable[[Option], bool]:
         return lambda option: index not in option
 
     def get_new_certain_values(self) -> dict[int, Cell]:
@@ -127,7 +133,7 @@ class Col:
                  number: int,
                  remaining_cells: int = -1,
                  remaining_water: int = -1,
-                 block_to_indices: dict[int, list[int]] = None) -> None:
+                 block_to_indices: Optional[dict[int, list[int]]] = None) -> None:
         self.block_ids = block_ids
         self.number = number
         self.remaining_cells = remaining_cells if remaining_cells != -1 else len(block_ids)
@@ -177,13 +183,13 @@ class Aquarium:
                  rows: list[Row],
                  cols: list[Col],
                  cells: PuzzleDataType,
-                 cells_to_blocks: list[list[Block]] = None,
+                 cells_to_blocks: list[list[Block]] | None = None,
                  undetermined_count: int = 0) -> None:
         self.size = size
         self.blocks = blocks
         self.rows = rows
         self.cols = cols
-        self.cells = cells or [[Cell() for i in range(size)] for j in range(size)]
+        self.cells = cells or [[Cell.UNDETERMINED for i in range(size)] for j in range(size)]
         self.cells_to_blocks = cells_to_blocks or self.create_cells_to_blocks_mapping()
         self.undetermined_count = undetermined_count or size ** 2
 
@@ -236,7 +242,7 @@ class Aquarium:
             for p in self.cells_to_blocks[point.row][point.col].get_points_to_propagate(point.row, value):
                 self.mark_value(p, value, False)
 
-    def create_cells_to_blocks_mapping(self) -> list[list[Block]]:
+    def create_cells_to_blocks_mapping(self) -> list[list[Block | None]]:
         cells_to_blocks = [[None] * self.size for i in range(self.size)]
         for block in self.blocks:
             for point in block.points:

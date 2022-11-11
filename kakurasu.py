@@ -6,7 +6,7 @@ import re
 from typing import Dict, FrozenSet, Iterable, List, Set, Tuple, Union, Callable
 import requests
 
-from website_interface import WebsiteInterface
+from utils.website_interface import WebsiteInterface
 
 
 def powerset(iterable: Iterable) -> Iterable[FrozenSet]:

@@ -7,7 +7,7 @@ import time
 from typing import Counter, Iterable, List, Set, Tuple
 
 
-from website_interface import WebsiteInterface
+from utils.website_interface import WebsiteInterface
 
 
 class NurikabeException(Exception):
