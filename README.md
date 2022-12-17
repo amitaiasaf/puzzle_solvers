@@ -9,5 +9,7 @@ Some bots for solving puzzles in some websites over the internet.
 * https://www.puzzle-kakurasu.com/
 * https://www.puzzle-skyscrapers.com/
 * https://www.puzzle-nurikabe.com/
+* https://www.puzzle-lits.com/
+
 
 My nickname in the leaderboards is 4s4f4. There is a latency of ~200 ms between my computer and the servers.

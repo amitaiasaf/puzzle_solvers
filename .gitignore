@@ -2,3 +2,4 @@
 .email_address
 .vscode/*
 *.pyc
+.venv/*
