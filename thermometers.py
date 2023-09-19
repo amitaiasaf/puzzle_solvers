@@ -9,6 +9,7 @@ from utils.website_interface import WebsiteInterface
 class ThermometersException(Exception):
     pass
 
+
 class Cell(Enum):
     UNDETERMINED = " "
     LIQUID = "X"
@@ -20,6 +21,7 @@ class Direction(Enum):
     LEFT = 2
     DOWN = 3
     UP = 4
+    CURVED = 5
 
 
 @dataclass(frozen=True)
@@ -86,16 +88,18 @@ class Thermometers:
         thermometers = list[Thermometer]()
         for i, thermometer_data in enumerate(thermometers_data.split(";")):
             next_cell = Thermometers.get_next_cell(size, cell_to_thermometer, next_cell)
-            direction, data = map(int, thermometer_data.split(",", maxsplit=1))
-            match Direction(direction):
+            direction, data = thermometer_data.split(",", maxsplit=1)
+            match Direction(int(direction)):
                 case Direction.RIGHT:
-                    points = [Point(next_cell.row, next_cell.col + i) for i in range(data)]
+                    points = [Point(next_cell.row, next_cell.col + i) for i in range(int(data))]
                 case Direction.LEFT:
-                    points = [Point(next_cell.row, next_cell.col + i) for i in range(data - 1, -1, -1)]
+                    points = [Point(next_cell.row, next_cell.col + i) for i in range(int(data) - 1, -1, -1)]
                 case Direction.DOWN:
-                    points = [Point(next_cell.row + i, next_cell.col) for i in range(data)]
+                    points = [Point(next_cell.row + i, next_cell.col) for i in range(int(data))]
                 case Direction.UP:
-                    points = [Point(next_cell.row + i, next_cell.col) for i in range(data - 1, -1, -1)]
+                    points = [Point(next_cell.row + i, next_cell.col) for i in range(int(data) - 1, -1, -1)]
+                case Direction.CURVED:
+                    points = [Point(d // size, d % size) for d in map(int, data.split(","))]
             assert cell_to_thermometer.keys().isdisjoint(points)
             for point in points:
                 cell_to_thermometer[point] = i
@@ -110,13 +114,13 @@ class Thermometers:
                 if Point(row, col) not in cells_to_thermometers:
                     return Point(row, col)
         raise RuntimeError("All cells are used")
-    
+
     def serialize_solution(self) -> str:
         return "".join("".join("y" if c == Cell.LIQUID else "n" for c in row) for row in self.cells)
 
     def __getitem__(self, point: Point) -> Cell:
         return self.cells[point.row][point.col]
-    
+
     def __setitem__(self, point: Point, value: Cell):
         self.cells[point.row][point.col] = value
 
@@ -136,7 +140,6 @@ class Thermometers:
         self.rows[point.row].cur_liquid += 1
         self.cols[point.col].cur_liquid += 1
 
-
     def mark_air(self, point: Point):
         for p in self.thermometers[self.cell_to_thermometer[point]].points[::-1]:
             self.mark_point_as_air(p)
@@ -152,16 +155,15 @@ class Thermometers:
         self.undetermined_count -= 1
         self.rows[point.row].cur_air += 1
         self.cols[point.col].cur_air += 1
-    
-    
+
     def get_intersection_with_line(self, thermometer: Thermometer, line: Line) -> Points:
         if line.is_col:
             return [p for p in thermometer.points if p.col == line.line_id and self[p] == Cell.UNDETERMINED]
         return [p for p in thermometer.points if p.row == line.line_id and self[p] == Cell.UNDETERMINED]
-    
+
     def get_intersection_with_col(self, thermometer: Thermometer, col: Line) -> Points:
         return [p for p in thermometer.points if p.col == col.line_id and self[p] == Cell.UNDETERMINED]
-    
+
     def solve(self):
         last_undetermined = self.undetermined_count
         while self.undetermined_count:
@@ -192,7 +194,7 @@ class Thermometers:
 
 def main():
     website_interface = WebsiteInterface(
-        "https://www.puzzle-thermometers.com/", {"size": 12, "specific": 0, "specid": 13112563})
+        "https://www.puzzle-thermometers.com/", {"size": 13, "specific": 0, "specid": 13112563})
     board = Thermometers.from_website(website_interface)
     board.solve()
     website_interface.submit_solution(board.serialize_solution())
