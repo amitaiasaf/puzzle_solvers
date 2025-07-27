@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import Enum
 from itertools import combinations
 import re
-from typing import Callable
+from typing import Callable, Optional
 
 from utils.website_interface import WebsiteInterface
 
@@ -28,7 +28,7 @@ class Cell:
             return " "
         elif self.type == CellType.STAR:
             return "#"
-        elif self.type == CellType.NOT_STAR:
+        else:  # CellType.NOT_STAR
             return "*"
 
 
@@ -66,8 +66,8 @@ class Block:
     def __init__(self,
                  points: set[Point],
                  stars: int,
-                 options: list[Option] | None = None,
-                 options_neighbors: dict[Option, set[Point]] | None = None,
+                 options: Optional[list[Option]] = None,
+                 options_neighbors: Optional[dict[Option, set[Point]]] = None,
                  line: bool = False) -> None:
         self.points = points
         self.stars = stars
@@ -119,13 +119,13 @@ class Block:
     def __deepcopy__(self, _) -> Block:
         return Block(copy(self.points), self.stars, copy(self.options), self.options_neighbors)
 
-    def get_option_neighbors(self, option: Option):
+    def get_option_neighbors(self, option: Option) -> set[Point]:
         option = frozenset(option)
         if option not in self.options_neighbors:
             self.options_neighbors[option] = set().union(*map(Point.get_neighbors, option))
         return self.options_neighbors[option]
 
-    def is_valid_option(self, option: Option):
+    def is_valid_option(self, option: Option) -> bool:
         for p, q in combinations(option, 2):
             if p.is_neighbor(q):
                 return False
@@ -139,7 +139,7 @@ class Block:
     def not_in_option(point: Point) -> Callable[[Option], bool]:
         return lambda option: point not in option
 
-    def notify_value(self, point: Point, value: CellType):
+    def notify_value(self, point: Point, value: CellType) -> None:
         if value == CellType.STAR:
             self.options = list(filter(self.in_option(point), self.options))
             self.stars -= 1
@@ -159,9 +159,9 @@ class Block:
             raise StarBattleException()
         if self.stars > len(self.points):
             raise StarBattleException()
-        possible_stars = set().union(*self.options) & self.points
-        not_stars = self.points - possible_stars
-        neighbors_for_all_options = set().union(*(p.get_neighbors() for p in possible_stars))
+        possible_stars: set[Point] = set().union(*self.options) & self.points
+        not_stars: set[Point] = self.points - possible_stars
+        neighbors_for_all_options: set[Point] = set().union(*(p.get_neighbors() for p in possible_stars))
 
         for option in self.options:
             if not neighbors_for_all_options:
@@ -176,9 +176,9 @@ class StarBattle:
                  size: int,
                  stars: int,
                  blocks: list[Block],
-                 cells: PuzzleDataType = None,
-                 rows: list[Block] = None,
-                 cols: list[Block] = None,
+                 cells: Optional[PuzzleDataType] = None,
+                 rows: Optional[list[Block]] = None,
+                 cols: Optional[list[Block]] = None,
                  undetermined_count: int = 0) -> None:
 
         self.size = size
@@ -193,7 +193,7 @@ class StarBattle:
         self.all_blocks = self.blocks + self.rows + self.cols
         self.undetermined_count = undetermined_count or self.size ** 2
 
-    def __deepcopy__(self, _) -> StarBattle:
+    def __deepcopy__(self, _) -> "StarBattle":
         return StarBattle(self.size,
                           self.stars,
                           deepcopy(self.blocks),
@@ -227,7 +227,7 @@ class StarBattle:
         return self.cells[point.row][point.col]
 
     @staticmethod
-    def from_website(website_interface: StarBattleWebsiteInterface):
+    def from_website(website_interface: "StarBattleWebsiteInterface") -> "StarBattle":
         assert website_interface.width == website_interface.height
         size = website_interface.width
         task = website_interface.task
@@ -244,13 +244,13 @@ class StarBattle:
     def serialize_solution(self) -> str:
         return "".join("".join("y" if c.type == CellType.STAR else "n" for c in row) for row in self.cells)
 
-    def create_cells_to_blocks_mapping(self) -> list[list[None | Block]]:
+    def create_cells_to_blocks_mapping(self) -> list[list[Block]]:
         cells_to_blocks: list[list[None | Block]] = [[None] * self.size for i in range(self.size)]
         for block in self.blocks:
             for point in block.points:
                 cells_to_blocks[point.row][point.col] = block
 
-        return cells_to_blocks
+        return cells_to_blocks # type: ignore
 
     def mark_not_star(self, point: Point) -> None:
         if point.row < 0 or point.row >= self.size or point.col < 0 or point.col >= self.size:
@@ -286,10 +286,10 @@ class StarBattle:
     def get_lines_points(self, lines: list[Block]) -> set[Point]:
         return set().union(*(line.points for line in lines))
 
-    def find_best_block_to_guess(self):
+    def find_best_block_to_guess(self) -> Block:
         return min(self.all_blocks, key=lambda b: (len(b.options), -b.stars) if len(b.options) > 1 else (10000, 10000))
 
-    def guess(self):
+    def guess(self) -> None:
         guess_block = self.find_best_block_to_guess()
         guess = guess_block.options[-1]
         try:
@@ -336,9 +336,9 @@ class StarBattle:
 
 
 class StarBattleWebsiteInterface(WebsiteInterface):
-    def __init__(self, url: str, params: dict = None) -> None:
+    def __init__(self, url: str, params: Optional[dict] = None) -> None:
         super().__init__(url, params)
-        self.stars = int(re.search(r',stars:(\d+) ,', self.initial_response_text).group(1))
+        self.stars = int(self.get_field_by_regex(r',stars:(\d+) ,'))
 
 
 def main():
