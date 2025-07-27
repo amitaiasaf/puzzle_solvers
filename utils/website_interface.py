@@ -36,7 +36,7 @@ class WebsiteInterface:
         result = re.search(regex, text)
         if result:
             return result.group(1)
-        raise ParsingException()
+        raise ParsingException(f"The Regex {regex} did not match in the text provided.")
 
     def submit_solution(self, solution: str, email_address: Optional[str] = None):
         data = {
@@ -48,7 +48,7 @@ class WebsiteInterface:
             "ready": "+++Done+++",
         }
         response = self.session.post(self.url, data)
-        result = self.extract_by_regex_from_text(r'<div id="ajaxResponse"><p class="[^"]*">([^<]*)</p>', response.text)
+        result = self.extract_by_regex_from_text(r'<div id="ajaxResponse"[^>]*><p class="[^"]*">([^<]*)</p>', response.text)
         if not result.startswith("Congratulations!"):
             raise WrongSolutionException(result)
 
@@ -59,7 +59,7 @@ class WebsiteInterface:
                 with open(".email_address") as file_obj:
                     email_address = file_obj.read()
 
-            solparams = self.extract_by_regex_from_text(r'name="solparams" value="([^"]*)"', response.text)
+            solparams = self.extract_by_regex_from_text(r'name="(?:solparams|param)" value="([^"]*)"', response.text)
             data = {
                 "email": email_address,
                 "robot": 1,
