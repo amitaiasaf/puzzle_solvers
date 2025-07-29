@@ -51,7 +51,7 @@ class Line(list[Cell]):
         if self[index] != Cell.UNDETERMINED:
             raise BinarioError()
         self[index] = value
-        for i in range(max(0, index - 2), min(len(self) - 2, index)):
+        for i in range(max(0, index - 2), min(len(self) - 2, index + 1)):
             if self[i] == self[i + 1] == self[i + 2]:
                 raise BinarioError("Cannot set value that creates a triplet")
         self.remaining[value] -= 1
