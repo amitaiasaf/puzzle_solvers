@@ -13,4 +13,4 @@ Some bots for solving puzzles in some websites over the internet.
 * https://www.puzzle-thermometers.com/
 
 
-My nickname in the leaderboards is 4s4f4. There is a latency of ~200 ms between my computer and the servers.
+My nickname in the leaderboards is Asafa. There is a latency of 200-250 ms between my computer and the servers.
